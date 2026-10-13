@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="hi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Account Data & Deletion</title>
+<script src="https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit" async defer></script>
+<style>
+:root{--bg:#0B0D10;--panel:#14171C;--card:#1A1E24;--border:#262B33;--text:#E8EAED;--muted:#8A909C;--accent:#3ED598;--accent-text:#0B0D10;--red:#F1685E;--amber:#E8B94B;}
+@media (prefers-color-scheme: light){:root{--bg:#F4F6F8;--panel:#fff;--card:#fff;--border:#DDE2E8;--text:#1A1E24;--muted:#667085;--accent:#12A06B;--accent-text:#fff;}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif;line-height:1.5}
+.wrap{max-width:480px;margin:0 auto;padding:24px 16px 60px}
+h1{font-size:21px;margin:0 0 6px}
+.sub{color:var(--muted);font-size:13.5px;margin:0 0 20px}
+.card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:18px;margin-bottom:14px}
+label{display:block;font-size:12.5px;font-weight:700;color:var(--muted);margin:14px 0 6px}
+label:first-child{margin-top:0}
+input,select{width:100%;padding:12px;border:1px solid var(--border);border-radius:10px;background:var(--panel);color:var(--text);font-size:15px;font-family:inherit}
+input:focus,select:focus{outline:none;border-color:var(--accent)}
+#otpInput{font-family:ui-monospace,Consolas,monospace;letter-spacing:2px;font-size:17px;text-align:center}
+.btn{width:100%;border:none;border-radius:10px;padding:13px;font-size:15px;font-weight:700;cursor:pointer;background:var(--accent);color:var(--accent-text);margin-top:14px}
+.btn.ghost{background:transparent;color:var(--text);border:1px solid var(--border)}
+.btn.danger{background:var(--red);color:#fff}
+.btn:disabled{opacity:.55;cursor:not-allowed}
+.msg{font-size:13.5px;margin-top:12px;white-space:pre-wrap}
+.msg.err{color:var(--red)} .msg.ok{color:var(--accent)} .msg.warn{color:var(--amber)}
+.hidden{display:none !important}
+.timer{font-size:13px;color:var(--muted);text-align:center;margin-top:8px}
+.big{font-size:17px;font-weight:700;margin-bottom:6px}
+.note{font-size:12.5px;color:var(--muted);margin-top:10px}
+#ts{margin-top:14px;min-height:65px}
+#modalBg{position:fixed;inset:0;background:rgba(0,0,0,.6);display:flex;align-items:center;justify-content:center;padding:16px;z-index:50}
+#modal{background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:18px;max-width:420px;width:100%}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Account data & deletion</h1>
+  <p class="sub">Apna account ka data download karo ya account delete karne ki request do. Email par OTP aayega.</p>
+
+  <!-- STEP 1 -->
+  <div class="card" id="step1">
+    <label>App / Board</label>
+    <input type="search" id="appSearch" placeholder="Board ka naam search karo (e.g. SEBA, CBSE)" autocomplete="off">
+    <select id="appSelect" size="1" style="margin-top:8px"></select>
+    <label>Email (jo app me use ki thi)</label>
+    <input type="email" id="emailInput" placeholder="you@example.com" autocomplete="email">
+    <div id="ts"></div>
+    <button class="btn" id="sendBtn">OTP bhejo</button>
+    <div class="msg" id="msg1"></div>
+    <div class="note">Sirf India ke users ke liye. VPN band rakho.</div>
+  </div>
+
+  <!-- STEP 2 -->
+  <div class="card hidden" id="step2">
+    <div class="big">OTP daalo</div>
+    <div class="sub" id="otpTo" style="margin-bottom:10px"></div>
+    <input id="otpInput" maxlength="15" placeholder="15 character OTP" autocomplete="one-time-code" autocapitalize="off" spellcheck="false">
+    <button class="btn" id="verifyBtn" disabled>Verify</button>
+    <div class="timer" id="timer"></div>
+    <button class="btn ghost" id="resendBtn" disabled>Naya OTP maango</button>
+    <div class="msg" id="msg2"></div>
+  </div>
+
+  <!-- STEP 3 -->
+  <div class="card hidden" id="step3"></div>
+</div>
+<div id="modalBg" class="hidden"><div id="modal"></div></div>
+
+<script>
+(function(){
+'use strict';
+// ===== Config (secret nahi — public values) =====
+var ACCOUNT_API = "https://account.rajeshuniqueapps.workers.dev";   // account Worker ka URL (page GitHub par hai, isliye poora URL)
+var TURNSTILE_SITEKEY = "YOUR_TURNSTILE_SITE_KEY";                  // <-- yaha Turnstile ki SITE KEY (public) paste karo, quotes ke andar
+const BOARDS = [
+{ name: "CBSE — Central Board of Secondary Education", code: "CBSE42888" },
+{ name: "NIOS — National Institute of Open Schooling", code: "NIOS28546" },
+{ name: "CISCE — Council for the Indian School Certificate Examinations", code: "CISCE24206" },
+{ name: "BIEAP — Board of Intermediate Education, Andhra Pradesh", code: "BIEAP23945" },
+{ name: "BSEAP — Board of Secondary Education, Andhra Pradesh", code: "BSEAP54987" },
+{ name: "APOSS — A.P. Open School Society", code: "APOSS95894" },
+{ name: "AHSEC — Assam Higher Secondary Education Council", code: "AHSEC40589" },
+{ name: "SEBA — Board of Secondary Education, Assam", code: "SEBA24627" },
+{ name: "BSEB — Bihar School Examination Board", code: "BSEB85890" },
+{ name: "BBOSE — Bihar Board of Open Schooling and Examination", code: "BBOSE29642" },
+{ name: "CGBSE — Chhattisgarh Board of Secondary Education", code: "CGBSE73107" },
+{ name: "CGSOS — Chhattisgarh State Open School", code: "CGSOS89945" },
+{ name: "GBSHSE — Goa Board of Secondary and Higher Secondary Education", code: "GBSHSE63837" },
+{ name: "GSEB — Gujarat Secondary and Higher Secondary Education Board", code: "GSEB45595" },
+{ name: "BSEH — Board of School Education Haryana", code: "BSEH74852" },
+{ name: "HPBOSE — Himachal Pradesh Board of School Education", code: "HPBOSE54658" },
+{ name: "JKBOSE — J&K State Board of School Education", code: "JKBOSE74299" },
+{ name: "JAC — Jharkhand Academic Council", code: "JAC86306" },
+{ name: "PUE — Department of Pre-University Education, Karnataka", code: "PUE86436" },
+{ name: "KSEEB — Karnataka Secondary Education Examination Board", code: "KSEEB37224" },
+{ name: "KBPE — Kerala Board of Public Examination", code: "KBPE34386" },
+{ name: "KBHSE — Kerala Board of Higher Secondary Education", code: "KBHSE94545" },
+{ name: "VHSE — Board of Vocational Higher Secondary Education, Kerala", code: "VHSE88200" },
+{ name: "MSBSHSE — Maharashtra State Board of Secondary and Higher Secondary Education", code: "MSBSHSE93760" },
+{ name: "MPBSE — Board of Secondary Education, Madhya Pradesh", code: "MPBSE23191" },
+{ name: "MPSOS — M.P. State Open School Education Board", code: "MPSOS67439" },
+{ name: "BSEM — Board of Secondary Education, Manipur", code: "BSEM89255" },
+{ name: "COHSEM — Council of Higher Secondary Education, Manipur", code: "COHSEM93879" },
+{ name: "MBOSE — Meghalaya Board of School Education", code: "MBOSE19617" },
+{ name: "MBSE — Mizoram Board of School Education", code: "MBSE54433" },
+{ name: "NBSE — Nagaland Board of School Education", code: "NBSE36133" },
+{ name: "BSEO — Board of Secondary Education, Odisha", code: "BSEO59057" },
+{ name: "CHSE — Council of Higher Secondary Education, Odisha", code: "CHSE81972" },
+{ name: "PSEB — Punjab School Education Board", code: "PSEB64762" },
+{ name: "RBSE — Board of Secondary Education, Rajasthan", code: "RBSE16990" },
+{ name: "RSOS — Rajasthan State Open School", code: "RSOS41071" },
+{ name: "TNBSE — State Board of School Examinations & Board of Higher Secondary, Tamil Nadu", code: "TNBSE58904" },
+{ name: "BSET — Board of Secondary Education, Telangana State", code: "BSET33285" },
+{ name: "TSBIE — Telangana State Board of Intermediate Education", code: "TSBIE50937" },
+{ name: "TSOSS — Telangana Open School Society", code: "TSOSS17743" },
+{ name: "TBSE — Tripura Board of Secondary Education", code: "TBSE53399" },
+{ name: "UPMSP — U.P. Board of High School & Intermediate Education", code: "UPMSP16220" },
+{ name: "UBSE — Board of School Education, Uttarakhand", code: "UBSE94942" },
+{ name: "WBBSE — West Bengal Board of Secondary Education", code: "WBBSE53906" },
+{ name: "WBCHSE — West Bengal Council of Higher Secondary Education", code: "WBCHSE57149" },
+{ name: "WBCROS — The West Bengal Council of Rabindra Open Schooling", code: "WBCROS30035" },
+{ name: "WBSCTVE — West Bengal State Council of Technical & Vocational Education", code: "WBSCTVE44528" },
+{ name: "MPSS — Maharishi Patanjali Sanskrit Sansthan", code: "MPSS23904" },
+{ name: "UEB — Urdu Education Board", code: "UEB44297" },
+{ name: "BSSB — Bihar Sanskrit Shiksha Board", code: "BSSB34875" },
+{ name: "UPBSSE — U.P. Board of Sec. Sanskrit Education", code: "UPBSSE99120" },
+{ name: "ASB — Assam Sanskrit Board", code: "ASB43750" },
+{ name: "JMI — Jamia Millia Islamia Board of School Education", code: "JMI27302" },
+{ name: "USSP — Uttarakhand Sanskrit Shiksha Parishad", code: "USSP62486" },
+{ name: "SMEBA — State Madrassa Education Board, Assam", code: "SMEBA81521" },
+{ name: "BSMEB — Bihar State Madrassa Education Board", code: "BSMEB16548" },
+{ name: "WBBME — West Bengal Board of Madrasah Education", code: "WBBME75425" },
+{ name: "CGMB — Chhattisgarh Madrasa Board", code: "CGMB90281" },
+{ name: "UMEB — Uttarakhand Madrasa Education Board", code: "UMEB98080" },
+{ name: "AMUB — Aligarh Muslim University Board of Secondary & Sr. Secondary Education", code: "AMUB40186" },
+{ name: "ICHSE — Indian Council for Hindi & Sanskrit Education", code: "ICHSE97616" },
+{ name: "DEI — Dayalbagh Educational Institute", code: "DEI82301" },
+{ name: "BV — Banasthali Vidyapith", code: "BV56793" },
+{ name: "BCSEA — Bhutan Council for School Examinations & Assessment", code: "BCSEA39319" },
+{ name: "CIE — Cambridge Assessment International Examinations", code: "CIE88344" },
+{ name: "CGSB — Chhattisgarh Sanskrit Board", code: "CGSB33164" },
+{ name: "MES — Mauritius Examination Syndicate", code: "MES31890" },
+{ name: "NEB — National Examinations Board, Nepal", code: "NEB39846" },
+{ name: "EDEXCEL — Pearson Edexcel Ltd.", code: "EDEXCEL15253" },
+{ name: "IB — International Baccalaureate", code: "IB37825" },
+{ name: "NWAC — Northwest Accreditation Commission", code: "NWAC27115" },
+{ name: "SSV — Sampurnanand Sanskrit Vishwavidyalaya", code: "SSV75363" }
+];
+
+function $(id){ return document.getElementById(id); }
+function esc(s){ return String(s == null ? '' : s).replace(/[&<>"']/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
+function fmtIst(ms){ return new Date(Number(ms)).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata', dateStyle: 'medium', timeStyle: 'short' }) + ' IST'; }
+function setMsg(id, text, kind){ var e = $(id); e.textContent = text || ''; e.className = 'msg' + (kind ? ' ' + kind : ''); }
+function show(step){ ['step1','step2','step3'].forEach(function(s){ $(s).classList.toggle('hidden', s !== step); }); }
+
+// ----- App dropdown (search ke saath) -----
+function fillApps(filter){
+  var f = String(filter || '').trim().toLowerCase();
+  var list = BOARDS.filter(function(b){ return !f || (b.name + ' ' + b.code).toLowerCase().indexOf(f) >= 0; });
+  var cur = $('appSelect').value;
+  $('appSelect').innerHTML = list.map(function(b){ return '<option value="' + esc(b.code) + '">' + esc(b.name) + ' (' + esc(b.code) + ')</option>'; }).join('') || '<option value="">Koi board nahi mila</option>';
+  if (list.some(function(b){ return b.code === cur; })) $('appSelect').value = cur;
+}
+fillApps('');
+$('appSearch').addEventListener('input', function(){ fillApps(this.value); });
+
+// ----- Turnstile -----
+var tsToken = '', tsWidget = null;
+function renderTs(){
+  if (!window.turnstile) { setTimeout(renderTs, 300); return; }
+  if (tsWidget !== null) { try { window.turnstile.reset(tsWidget); } catch (e) {} tsToken = ''; return; }
+  tsWidget = window.turnstile.render('#ts', {
+    sitekey: TURNSTILE_SITEKEY,
+    callback: function(t){ tsToken = t; },
+    'expired-callback': function(){ tsToken = ''; },
+    'error-callback': function(){ tsToken = ''; }
+  });
+}
+renderTs();
+
+// ----- API -----
+async function post(path, body){
+  var res, data = {};
+  try {
+    res = await fetch(ACCOUNT_API + path, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+  } catch (e) { var ne = new Error('Network error. Internet check karo.'); ne.code = 'network'; throw ne; }
+  try { data = await res.json(); } catch (e) {}
+  if (!res.ok) { var err = new Error(data.error || ('Error ' + res.status)); err.code = data.code || ''; err.data = data; err.status = res.status; throw err; }
+  return data;
+}
+
+var state = { app: '', email: '', session: '' };
+var otpTimer = null, otpEnds = 0, cdEnds = 0;
+
+// ----- Step 1: OTP request -----
+$('sendBtn').onclick = async function(){
+  var app = $('appSelect').value, email = $('emailInput').value.trim();
+  setMsg('msg1', '');
+  if (!app) return setMsg('msg1', 'Board / App select karo.', 'err');
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)) return setMsg('msg1', 'Sahi email daalo.', 'err');
+  if (!tsToken) return setMsg('msg1', 'Pehle captcha pura karo.', 'warn');
+  var btn = $('sendBtn'); btn.disabled = true; btn.textContent = 'Bhej raha hoon…';
+  try {
+    var r = await post('/acct/otp/request', { appCode: app, email: email, turnstile: tsToken });
+    state.app = app; state.email = email; state.session = '';
+    $('otpTo').textContent = email + ' par OTP bheja gaya (agar email sahi hai). Spam folder bhi dekho.';
+    $('otpInput').value = ''; $('verifyBtn').disabled = true; setMsg('msg2', '');
+    show('step2'); startTimers(r.ttl || 120, r.cooldown || 30); $('otpInput').focus();
+  } catch (e) {
+    setMsg('msg1', e.message, e.code === 'cooldown' ? 'warn' : 'err');
+  }
+  btn.disabled = false; btn.textContent = 'OTP bhejo';
+  renderTs();   // captcha dobara (token ek hi baar chalta hai)
+};
+
+// ----- Step 2: OTP verify -----
+function startTimers(ttl, cooldown){
+  otpEnds = Date.now() + ttl * 1000; cdEnds = Date.now() + cooldown * 1000;
+  clearInterval(otpTimer);
+  function tick(){
+    var left = Math.max(0, Math.ceil((otpEnds - Date.now()) / 1000));
+    $('timer').textContent = left > 0 ? ('OTP ' + left + ' second tak valid') : 'OTP expire ho gaya. Naya OTP maango.';
+    var cd = Math.max(0, Math.ceil((cdEnds - Date.now()) / 1000));
+    $('resendBtn').disabled = cd > 0;
+    $('resendBtn').textContent = cd > 0 ? ('Naya OTP maango (' + cd + 's)') : 'Naya OTP maango';
+    if (left <= 0 && cd <= 0) clearInterval(otpTimer);
+  }
+  tick(); otpTimer = setInterval(tick, 1000);
+}
+$('otpInput').addEventListener('input', function(){
+  this.value = this.value.toLowerCase().replace(/[^0-9a-z]/g, '').slice(0, 15);
+  $('verifyBtn').disabled = this.value.length !== 15;
+});
+$('resendBtn').onclick = function(){ clearInterval(otpTimer); show('step1'); setMsg('msg1', 'Captcha pura karke naya OTP maango.', 'warn'); };
+$('verifyBtn').onclick = async function(){
+  var btn = $('verifyBtn'); btn.disabled = true; setMsg('msg2', '');
+  try {
+    var r = await post('/acct/otp/verify', { appCode: state.app, email: state.email, otp: $('otpInput').value });
+    clearInterval(otpTimer);
+    state.session = r.session || '';
+    renderResult(r);
+  } catch (e) {
+    var extra = e.data && typeof e.data.left === 'number' ? ' (' + e.data.left + ' try baaki)' : '';
+    setMsg('msg2', e.message + extra, 'err');
+    btn.disabled = $('otpInput').value.length !== 15;
+  }
+};
+
+// ----- Step 3: result -----
+function modal(html){ $('modal').innerHTML = html; $('modalBg').classList.remove('hidden'); }
+function closeModal(){ $('modalBg').classList.add('hidden'); $('modal').innerHTML = ''; }
+function restart(msg){
+  state.session = ''; show('step1'); setMsg('msg1', msg || '', msg ? 'warn' : ''); renderTs();
+}
+function renderResult(r){
+  show('step3');
+  var el = $('step3');
+  if (!r.exists) {
+    el.innerHTML = '<div class="big">Account nahi mila</div><div class="sub">Is app (' + esc(state.app) + ') me ye email registered nahi hai. App aur email dobara check karo.</div><button class="btn ghost" id="backBtn">Wapas</button>';
+    $('backBtn').onclick = function(){ restart(); };
+    return;
+  }
+  if (r.state === 'deleted') {
+    el.innerHTML = '<div class="big">Account already deleted</div><div class="sub">Ye account pehle hi delete ho chuka hai aur ab use nahi ho sakta.</div><button class="btn ghost" id="backBtn">Wapas</button>';
+    $('backBtn').onclick = function(){ restart(); };
+    return;
+  }
+  var pending = r.state === 'pending';
+  var html = '<div class="big">' + (pending ? 'Deletion scheduled' : 'Account mil gaya') + '</div>' +
+    '<div class="sub">' + esc(state.email) + ' · ' + esc(state.app) + (r.count > 1 ? ' · ' + r.count + ' accounts' : '') + '</div>';
+  if (pending) {
+    html += '<div class="msg warn">Account ' + esc(fmtIst(r.executeAt)) + ' ke baad use nahi ho payega. Tab tak aap request cancel kar sakte ho.</div>';
+  }
+  html += '<button class="btn ghost" id="dlBtn">⬇ Mera data download karo (JSON)</button>';
+  html += pending ? '<button class="btn" id="cancelBtn">Deletion request cancel karo</button>'
+                  : '<button class="btn danger" id="delBtn">Account delete karne ki request</button>';
+  html += '<div class="msg" id="msg3"></div><div class="note">Session 10 minute tak chalta hai.</div>';
+  el.innerHTML = html;
+
+  $('dlBtn').onclick = doExport;
+  if (pending) $('cancelBtn').onclick = doCancel; else $('delBtn').onclick = confirmDelete;
+}
+function sessionGone(e){
+  if (e.code === 'session_expired') { restart('Session expire ho gaya. Dobara email + OTP se start karo.'); return true; }
+  if (e.code === 'deleted') { renderResult({ exists: true, state: 'deleted' }); return true; }
+  return false;
+}
+async function doExport(){
+  var btn = $('dlBtn'); btn.disabled = true; setMsg('msg3', 'Data nikal raha hoon…');
+  try {
+    var data = await post('/acct/export', { session: state.session });
+    var blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    var a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'my-account-data-' + state.app + '.json';
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(function(){ URL.revokeObjectURL(a.href); }, 3000);
+    setMsg('msg3', 'Download ho gaya.', 'ok');
+  } catch (e) { if (!sessionGone(e)) setMsg('msg3', e.message, 'err'); }
+  btn.disabled = false;
+}
+function confirmDelete(){
+  modal('<div class="big">Account delete karna hai?</div>' +
+    '<div class="sub">Request ke <b>5 din (120 ghante)</b> baad account use nahi ho payega. Un 5 din me aap kabhi bhi request cancel kar sakte ho. Data chahiye to pehle download kar lo.</div>' +
+    '<button class="btn danger" id="yesDel">Haan, delete request bhejo</button><button class="btn ghost" id="noDel">Nahi</button>');
+  $('noDel').onclick = closeModal;
+  $('yesDel').onclick = async function(){
+    closeModal();
+    try {
+      var r = await post('/acct/delete', { session: state.session });
+      renderResult({ exists: true, state: 'pending', executeAt: r.executeAt, count: 1 });
+    } catch (e) { if (!sessionGone(e)) setMsg('msg3', e.message, 'err'); }
+  };
+}
+async function doCancel(){
+  var btn = $('cancelBtn'); btn.disabled = true;
+  try {
+    await post('/acct/cancel', { session: state.session });
+    renderResult({ exists: true, state: 'active', count: 1 });
+    setMsg('msg3', 'Deletion request cancel ho gayi. Account normal chalega.', 'ok');
+  } catch (e) { if (!sessionGone(e)) { setMsg('msg3', e.message, 'err'); btn.disabled = false; } }
+}
+$('modalBg').addEventListener('click', function(e){ if (e.target === $('modalBg')) closeModal(); });
+})();
+</script>
+</body>
+</html>
