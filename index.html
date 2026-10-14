@@ -1,79 +1,226 @@
 <!DOCTYPE html>
-<html lang="hi">
+<html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Account Data & Deletion</title>
+<title>Account Data & Deletion Portal</title>
 <script src="https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit" async defer></script>
 <style>
-:root{--bg:#0B0D10;--panel:#14171C;--card:#1A1E24;--border:#262B33;--text:#E8EAED;--muted:#8A909C;--accent:#3ED598;--accent-text:#0B0D10;--red:#F1685E;--amber:#E8B94B;}
-@media (prefers-color-scheme: light){:root{--bg:#F4F6F8;--panel:#fff;--card:#fff;--border:#DDE2E8;--text:#1A1E24;--muted:#667085;--accent:#12A06B;--accent-text:#fff;}}
-*{box-sizing:border-box}
-body{margin:0;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif;line-height:1.5}
-.wrap{max-width:480px;margin:0 auto;padding:24px 16px 60px}
-h1{font-size:21px;margin:0 0 6px}
-.sub{color:var(--muted);font-size:13.5px;margin:0 0 20px}
-.card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:18px;margin-bottom:14px}
-label{display:block;font-size:12.5px;font-weight:700;color:var(--muted);margin:14px 0 6px}
-label:first-child{margin-top:0}
-input,select{width:100%;padding:12px;border:1px solid var(--border);border-radius:10px;background:var(--panel);color:var(--text);font-size:15px;font-family:inherit}
-input:focus,select:focus{outline:none;border-color:var(--accent)}
-#otpInput{font-family:ui-monospace,Consolas,monospace;letter-spacing:2px;font-size:17px;text-align:center}
-.btn{width:100%;border:none;border-radius:10px;padding:13px;font-size:15px;font-weight:700;cursor:pointer;background:var(--accent);color:var(--accent-text);margin-top:14px}
-.btn.ghost{background:transparent;color:var(--text);border:1px solid var(--border)}
-.btn.danger{background:var(--red);color:#fff}
-.btn:disabled{opacity:.55;cursor:not-allowed}
-.msg{font-size:13.5px;margin-top:12px;white-space:pre-wrap}
-.msg.err{color:var(--red)} .msg.ok{color:var(--accent)} .msg.warn{color:var(--amber)}
-.hidden{display:none !important}
-.timer{font-size:13px;color:var(--muted);text-align:center;margin-top:8px}
-.big{font-size:17px;font-weight:700;margin-bottom:6px}
-.note{font-size:12.5px;color:var(--muted);margin-top:10px}
-#ts{margin-top:14px;min-height:65px}
-#modalBg{position:fixed;inset:0;background:rgba(0,0,0,.6);display:flex;align-items:center;justify-content:center;padding:16px;z-index:50}
-#modal{background:var(--panel);border:1px solid var(--border);border-radius:14px;padding:18px;max-width:420px;width:100%}
+:root {
+  --bg: #090a0f;
+  --panel: #12151c;
+  --card: #181c25;
+  --border: #262c38;
+  --text: #f3f4f6;
+  --muted: #9ca3af;
+  --accent: #10b981;
+  --accent-hover: #059669;
+  --accent-text: #ffffff;
+  --red: #ef4444;
+  --amber: #f59e0b;
+  --ring: rgba(16, 185, 129, 0.2);
+}
+@media (prefers-color-scheme: light) {
+  :root {
+    --bg: #f8fafc;
+    --panel: #ffffff;
+    --card: #ffffff;
+    --border: #e2e8f0;
+    --text: #0f172a;
+    --muted: #64748b;
+    --accent: #059669;
+    --accent-hover: #047857;
+    --accent-text: #ffffff;
+    --ring: rgba(5, 150, 105, 0.15);
+  }
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+}
+.wrap {
+  max-width: 460px;
+  margin: 0 auto;
+  padding: 40px 20px 80px;
+}
+h1 {
+  font-size: 24px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  margin: 0 0 8px;
+}
+.sub {
+  color: var(--muted);
+  font-size: 14px;
+  margin: 0 0 24px;
+}
+.card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 24px;
+  margin-bottom: 16px;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.04);
+}
+label {
+  display: block;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--muted);
+  margin: 16px 0 6px;
+  letter-spacing: 0.01em;
+}
+label:first-child { margin-top: 0; }
+input, select {
+  width: 100%;
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--panel);
+  color: var(--text);
+  font-size: 14.5px;
+  font-family: inherit;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+input:focus, select:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--ring);
+}
+#otpInput {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  letter-spacing: 4px;
+  font-size: 18px;
+  text-align: center;
+  font-weight: 600;
+}
+.btn {
+  width: 100%;
+  border: none;
+  border-radius: 10px;
+  padding: 13px;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  background: var(--accent);
+  color: var(--accent-text);
+  margin-top: 18px;
+  transition: background 0.2s, opacity 0.2s;
+}
+.btn:hover { background: var(--accent-hover); }
+.btn.ghost {
+  background: transparent;
+  color: var(--text);
+  border: 1px solid var(--border);
+}
+.btn.ghost:hover { background: var(--border); }
+.btn.danger {
+  background: var(--red);
+  color: #fff;
+}
+.btn.danger:hover { background: #dc2626; }
+.btn:disabled { opacity: 0.5; cursor: not-allowed; }
+.msg {
+  font-size: 13.5px;
+  margin-top: 14px;
+  white-space: pre-wrap;
+}
+.msg.err { color: var(--red); }
+.msg.ok { color: var(--accent); }
+.msg.warn { color: var(--amber); }
+.hidden { display: none !important; }
+.timer {
+  font-size: 13px;
+  color: var(--muted);
+  text-align: center;
+  margin-top: 10px;
+}
+.big {
+  font-size: 18px;
+  font-weight: 700;
+  margin-bottom: 6px;
+  letter-spacing: -0.01em;
+}
+.note {
+  font-size: 12.5px;
+  color: var(--muted);
+  margin-top: 12px;
+}
+#ts {
+  margin-top: 16px;
+  min-height: 65px;
+}
+#modalBg {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.65);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  z-index: 50;
+}
+#modal {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 24px;
+  max-width: 420px;
+  width: 100%;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.2);
+}
 </style>
 </head>
 <body>
 <div class="wrap">
-  <h1>Account data & deletion</h1>
-  <p class="sub">Apna account ka data download karo ya account delete karne ki request do. Email par OTP aayega.</p>
+  <h1>Account Data & Deletion</h1>
+  <p class="sub">Download your account data or submit a deletion request. An OTP will be sent to your email.</p>
 
   <!-- STEP 1 -->
   <div class="card" id="step1">
     <label>App / Board</label>
-    <input type="search" id="appSearch" placeholder="Board ka naam search karo (e.g. SEBA, CBSE)" autocomplete="off">
-    <select id="appSelect" size="1" style="margin-top:8px"></select>
-    <label>Email (jo app me use ki thi)</label>
+    <input type="search" id="appSearch" placeholder="Search board name (e.g., CBSE, SEBA)" autocomplete="off">
+    <select id="appSelect" size="1" style="margin-top: 8px;"></select>
+    
+    <label>Email Address</label>
     <input type="email" id="emailInput" placeholder="you@example.com" autocomplete="email">
+    
     <div id="ts"></div>
-    <button class="btn" id="sendBtn">OTP bhejo</button>
+    <button class="btn" id="sendBtn">Send OTP</button>
     <div class="msg" id="msg1"></div>
-    <div class="note">Sirf India ke users ke liye. VPN band rakho.</div>
+    <div class="note">For users in India only. Please ensure VPN is disabled.</div>
   </div>
 
   <!-- STEP 2 -->
   <div class="card hidden" id="step2">
-    <div class="big">OTP daalo</div>
-    <div class="sub" id="otpTo" style="margin-bottom:10px"></div>
-    <input id="otpInput" maxlength="15" placeholder="15 character OTP" autocomplete="one-time-code" autocapitalize="off" spellcheck="false">
-    <button class="btn" id="verifyBtn" disabled>Verify</button>
+    <div class="big">Enter Verification Code</div>
+    <div class="sub" id="otpTo" style="margin-bottom: 12px;"></div>
+    <input id="otpInput" maxlength="15" placeholder="15-character OTP" autocomplete="one-time-code" autocapitalize="off" spellcheck="false">
+    <button class="btn" id="verifyBtn" disabled>Verify Code</button>
     <div class="timer" id="timer"></div>
-    <button class="btn ghost" id="resendBtn" disabled>Naya OTP maango</button>
+    <button class="btn ghost" id="resendBtn" disabled>Resend OTP</button>
     <div class="msg" id="msg2"></div>
   </div>
 
   <!-- STEP 3 -->
   <div class="card hidden" id="step3"></div>
 </div>
-<div id="modalBg" class="hidden"><div id="modal"></div></div>
+
+<div id="modalBg" class="hidden">
+  <div id="modal"></div>
+</div>
 
 <script>
 (function(){
 'use strict';
-// ===== Config (secret nahi — public values) =====
-var ACCOUNT_API = "https://account.rajeshuniqueapps.workers.dev";   // account Worker ka URL (page GitHub par hai, isliye poora URL)
-var TURNSTILE_SITEKEY = "0x4AAAAAAFWbSlDwPUiOKffF";                  // <-- yaha Turnstile ki SITE KEY (public) paste karo, quotes ke andar
+var ACCOUNT_API = "https://account.rajeshuniqueapps.workers.dev";
+var TURNSTILE_SITEKEY = "0x4AAAAAAFWbSlDwPUiOKffF";
 const BOARDS = [
 { name: "CBSE — Central Board of Secondary Education", code: "CBSE42888" },
 { name: "NIOS — National Institute of Open Schooling", code: "NIOS28546" },
@@ -155,18 +302,16 @@ function fmtIst(ms){ return new Date(Number(ms)).toLocaleString('en-IN', { timeZ
 function setMsg(id, text, kind){ var e = $(id); e.textContent = text || ''; e.className = 'msg' + (kind ? ' ' + kind : ''); }
 function show(step){ ['step1','step2','step3'].forEach(function(s){ $(s).classList.toggle('hidden', s !== step); }); }
 
-// ----- App dropdown (search ke saath) -----
 function fillApps(filter){
   var f = String(filter || '').trim().toLowerCase();
   var list = BOARDS.filter(function(b){ return !f || (b.name + ' ' + b.code).toLowerCase().indexOf(f) >= 0; });
   var cur = $('appSelect').value;
-  $('appSelect').innerHTML = list.map(function(b){ return '<option value="' + esc(b.code) + '">' + esc(b.name) + ' (' + esc(b.code) + ')</option>'; }).join('') || '<option value="">Koi board nahi mila</option>';
+  $('appSelect').innerHTML = list.map(function(b){ return '<option value="' + esc(b.code) + '">' + esc(b.name) + ' (' + esc(b.code) + ')</option>'; }).join('') || '<option value="">No boards found</option>';
   if (list.some(function(b){ return b.code === cur; })) $('appSelect').value = cur;
 }
 fillApps('');
 $('appSearch').addEventListener('input', function(){ fillApps(this.value); });
 
-// ----- Turnstile -----
 var tsToken = '', tsWidget = null;
 function renderTs(){
   if (!window.turnstile) { setTimeout(renderTs, 300); return; }
@@ -180,12 +325,11 @@ function renderTs(){
 }
 renderTs();
 
-// ----- API -----
 async function post(path, body){
   var res, data = {};
   try {
     res = await fetch(ACCOUNT_API + path, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
-  } catch (e) { var ne = new Error('Network error. Internet check karo.'); ne.code = 'network'; throw ne; }
+  } catch (e) { var ne = new Error('Network error. Please check your connection.'); ne.code = 'network'; throw ne; }
   try { data = await res.json(); } catch (e) {}
   if (!res.ok) { var err = new Error(data.error || ('Error ' + res.status)); err.code = data.code || ''; err.data = data; err.status = res.status; throw err; }
   return data;
@@ -194,46 +338,47 @@ async function post(path, body){
 var state = { app: '', email: '', session: '' };
 var otpTimer = null, otpEnds = 0, cdEnds = 0;
 
-// ----- Step 1: OTP request -----
 $('sendBtn').onclick = async function(){
   var app = $('appSelect').value, email = $('emailInput').value.trim();
   setMsg('msg1', '');
-  if (!app) return setMsg('msg1', 'Board / App select karo.', 'err');
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)) return setMsg('msg1', 'Sahi email daalo.', 'err');
-  if (!tsToken) return setMsg('msg1', 'Pehle captcha pura karo.', 'warn');
-  var btn = $('sendBtn'); btn.disabled = true; btn.textContent = 'Bhej raha hoon…';
+  if (!app) return setMsg('msg1', 'Please select a board/app.', 'err');
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)) return setMsg('msg1', 'Please enter a valid email address.', 'err');
+  if (!tsToken) return setMsg('msg1', 'Please complete the captcha challenge.', 'warn');
+  var btn = $('sendBtn'); btn.disabled = true; btn.textContent = 'Sending OTP...';
   try {
     var r = await post('/acct/otp/request', { appCode: app, email: email, turnstile: tsToken });
     state.app = app; state.email = email; state.session = '';
-    $('otpTo').textContent = email + ' par OTP bheja gaya (agar email sahi hai). Spam folder bhi dekho.';
+    $('otpTo').textContent = 'An OTP has been sent to ' + email + ' (if registered). Please check your spam folder too.';
     $('otpInput').value = ''; $('verifyBtn').disabled = true; setMsg('msg2', '');
     show('step2'); startTimers(r.ttl || 120, r.cooldown || 30); $('otpInput').focus();
   } catch (e) {
     setMsg('msg1', e.message, e.code === 'cooldown' ? 'warn' : 'err');
   }
-  btn.disabled = false; btn.textContent = 'OTP bhejo';
-  renderTs();   // captcha dobara (token ek hi baar chalta hai)
+  btn.disabled = false; btn.textContent = 'Send OTP';
+  renderTs();
 };
 
-// ----- Step 2: OTP verify -----
 function startTimers(ttl, cooldown){
   otpEnds = Date.now() + ttl * 1000; cdEnds = Date.now() + cooldown * 1000;
   clearInterval(otpTimer);
   function tick(){
     var left = Math.max(0, Math.ceil((otpEnds - Date.now()) / 1000));
-    $('timer').textContent = left > 0 ? ('OTP ' + left + ' second tak valid') : 'OTP expire ho gaya. Naya OTP maango.';
+    $('timer').textContent = left > 0 ? ('OTP valid for ' + left + ' seconds') : 'OTP has expired. Please request a new one.';
     var cd = Math.max(0, Math.ceil((cdEnds - Date.now()) / 1000));
     $('resendBtn').disabled = cd > 0;
-    $('resendBtn').textContent = cd > 0 ? ('Naya OTP maango (' + cd + 's)') : 'Naya OTP maango';
+    $('resendBtn').textContent = cd > 0 ? ('Resend OTP (' + cd + 's)') : 'Resend OTP';
     if (left <= 0 && cd <= 0) clearInterval(otpTimer);
   }
   tick(); otpTimer = setInterval(tick, 1000);
 }
+
 $('otpInput').addEventListener('input', function(){
   this.value = this.value.toLowerCase().replace(/[^0-9a-z]/g, '').slice(0, 15);
   $('verifyBtn').disabled = this.value.length !== 15;
 });
-$('resendBtn').onclick = function(){ clearInterval(otpTimer); show('step1'); setMsg('msg1', 'Captcha pura karke naya OTP maango.', 'warn'); };
+
+$('resendBtn').onclick = function(){ clearInterval(otpTimer); show('step1'); setMsg('msg1', 'Please complete the captcha to request a new OTP.', 'warn'); };
+
 $('verifyBtn').onclick = async function(){
   var btn = $('verifyBtn'); btn.disabled = true; setMsg('msg2', '');
   try {
@@ -242,53 +387,55 @@ $('verifyBtn').onclick = async function(){
     state.session = r.session || '';
     renderResult(r);
   } catch (e) {
-    var extra = e.data && typeof e.data.left === 'number' ? ' (' + e.data.left + ' try baaki)' : '';
+    var extra = e.data && typeof e.data.left === 'number' ? ' (' + e.data.left + ' attempt(s) remaining)' : '';
     setMsg('msg2', e.message + extra, 'err');
     btn.disabled = $('otpInput').value.length !== 15;
   }
 };
 
-// ----- Step 3: result -----
 function modal(html){ $('modal').innerHTML = html; $('modalBg').classList.remove('hidden'); }
 function closeModal(){ $('modalBg').classList.add('hidden'); $('modal').innerHTML = ''; }
 function restart(msg){
   state.session = ''; show('step1'); setMsg('msg1', msg || '', msg ? 'warn' : ''); renderTs();
 }
+
 function renderResult(r){
   show('step3');
   var el = $('step3');
   if (!r.exists) {
-    el.innerHTML = '<div class="big">Account nahi mila</div><div class="sub">Is app (' + esc(state.app) + ') me ye email registered nahi hai. App aur email dobara check karo.</div><button class="btn ghost" id="backBtn">Wapas</button>';
+    el.innerHTML = '<div class="big">Account Not Found</div><div class="sub">This email is not registered with ' + esc(state.app) + '. Please check your details and try again.</div><button class="btn ghost" id="backBtn">Go Back</button>';
     $('backBtn').onclick = function(){ restart(); };
     return;
   }
   if (r.state === 'deleted') {
-    el.innerHTML = '<div class="big">Account already deleted</div><div class="sub">Ye account pehle hi delete ho chuka hai aur ab use nahi ho sakta.</div><button class="btn ghost" id="backBtn">Wapas</button>';
+    el.innerHTML = '<div class="big">Account Already Deleted</div><div class="sub">This account has already been deleted and is no longer accessible.</div><button class="btn ghost" id="backBtn">Go Back</button>';
     $('backBtn').onclick = function(){ restart(); };
     return;
   }
   var pending = r.state === 'pending';
-  var html = '<div class="big">' + (pending ? 'Deletion scheduled' : 'Account mil gaya') + '</div>' +
+  var html = '<div class="big">' + (pending ? 'Deletion Scheduled' : 'Account Found') + '</div>' +
     '<div class="sub">' + esc(state.email) + ' · ' + esc(state.app) + (r.count > 1 ? ' · ' + r.count + ' accounts' : '') + '</div>';
   if (pending) {
-    html += '<div class="msg warn">Account ' + esc(fmtIst(r.executeAt)) + ' ke baad use nahi ho payega. Tab tak aap request cancel kar sakte ho.</div>';
+    html += '<div class="msg warn">Your account will be permanently deleted after ' + esc(fmtIst(r.executeAt)) + '. You can cancel this request anytime before then.</div>';
   }
-  html += '<button class="btn ghost" id="dlBtn">⬇ Mera data download karo (JSON)</button>';
-  html += pending ? '<button class="btn" id="cancelBtn">Deletion request cancel karo</button>'
-                  : '<button class="btn danger" id="delBtn">Account delete karne ki request</button>';
-  html += '<div class="msg" id="msg3"></div><div class="note">Session 10 minute tak chalta hai.</div>';
+  html += '<button class="btn ghost" id="dlBtn">⬇ Download Account Data (JSON)</button>';
+  html += pending ? '<button class="btn" id="cancelBtn">Cancel Deletion Request</button>'
+                  : '<button class="btn danger" id="delBtn">Request Account Deletion</button>';
+  html += '<div class="msg" id="msg3"></div><div class="note">Session is valid for 10 minutes.</div>';
   el.innerHTML = html;
 
   $('dlBtn').onclick = doExport;
   if (pending) $('cancelBtn').onclick = doCancel; else $('delBtn').onclick = confirmDelete;
 }
+
 function sessionGone(e){
-  if (e.code === 'session_expired') { restart('Session expire ho gaya. Dobara email + OTP se start karo.'); return true; }
+  if (e.code === 'session_expired') { restart('Session expired. Please restart using email and OTP.'); return true; }
   if (e.code === 'deleted') { renderResult({ exists: true, state: 'deleted' }); return true; }
   return false;
 }
+
 async function doExport(){
-  var btn = $('dlBtn'); btn.disabled = true; setMsg('msg3', 'Data nikal raha hoon…');
+  var btn = $('dlBtn'); btn.disabled = true; setMsg('msg3', 'Preparing download...');
   try {
     var data = await post('/acct/export', { session: state.session });
     var blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
@@ -297,14 +444,15 @@ async function doExport(){
     a.download = 'my-account-data-' + state.app + '.json';
     document.body.appendChild(a); a.click(); a.remove();
     setTimeout(function(){ URL.revokeObjectURL(a.href); }, 3000);
-    setMsg('msg3', 'Download ho gaya.', 'ok');
+    setMsg('msg3', 'Download completed successfully.', 'ok');
   } catch (e) { if (!sessionGone(e)) setMsg('msg3', e.message, 'err'); }
   btn.disabled = false;
 }
+
 function confirmDelete(){
-  modal('<div class="big">Account delete karna hai?</div>' +
-    '<div class="sub">Request ke <b>5 din (120 ghante)</b> baad account use nahi ho payega. Un 5 din me aap kabhi bhi request cancel kar sakte ho. Data chahiye to pehle download kar lo.</div>' +
-    '<button class="btn danger" id="yesDel">Haan, delete request bhejo</button><button class="btn ghost" id="noDel">Nahi</button>');
+  modal('<div class="big">Confirm Account Deletion</div>' +
+    '<div class="sub">Your account will be permanently deleted after <b>5 days (120 hours)</b>. You can cancel this request at any time during this period. We recommend downloading your data first.</div>' +
+    '<button class="btn danger" id="yesDel">Yes, Request Deletion</button><button class="btn ghost" id="noDel">Cancel</button>');
   $('noDel').onclick = closeModal;
   $('yesDel').onclick = async function(){
     closeModal();
@@ -314,17 +462,18 @@ function confirmDelete(){
     } catch (e) { if (!sessionGone(e)) setMsg('msg3', e.message, 'err'); }
   };
 }
+
 async function doCancel(){
   var btn = $('cancelBtn'); btn.disabled = true;
   try {
     await post('/acct/cancel', { session: state.session });
     renderResult({ exists: true, state: 'active', count: 1 });
-    setMsg('msg3', 'Deletion request cancel ho gayi. Account normal chalega.', 'ok');
+    setMsg('msg3', 'Deletion request cancelled successfully. Your account is back to normal.', 'ok');
   } catch (e) { if (!sessionGone(e)) { setMsg('msg3', e.message, 'err'); btn.disabled = false; } }
 }
+
 $('modalBg').addEventListener('click', function(e){ if (e.target === $('modalBg')) closeModal(); });
 })();
 </script>
 </body>
-  </html>
-  
+</html>
